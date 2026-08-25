@@ -1,6 +1,6 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.hosttracker/hosttracker",
+  "name": "io.github.HostTracker/hosttracker",
   "title": "HostTracker",
   "description": "Website uptime monitoring: run checks from 300+ locations, manage monitors, alerts and incidents",
   "version": "2.0.0",
