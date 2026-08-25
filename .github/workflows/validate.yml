@@ -1,0 +1,98 @@
+name: validate
+# Keeps the published metadata honest: every JSON file parses, server.json carries what the MCP registry
+# requires, the endpoint is spelled the same way everywhere, and the registry's own validator agrees.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: JSON files parse
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          bad = []
+          for p in sorted(pathlib.Path('.').rglob('*.json')):
+              if '.git' in p.parts:
+                  continue
+              try:
+                  json.loads(p.read_text())
+                  print('ok', p)
+              except Exception as e:
+                  bad.append(f'{p}: {e}')
+          if bad:
+              sys.exit('invalid JSON:\n' + '\n'.join(bad))
+          PY
+
+      - name: server.json carries what the registry needs
+        run: |
+          python3 - <<'PY'
+          import json, re, sys
+          s = json.load(open('server.json'))
+          errs = []
+          def need(cond, msg):
+              if not cond:
+                  errs.append(msg)
+
+          need(s.get('$schema', '').startswith('https://static.modelcontextprotocol.io/schemas/'),
+               '$schema must point at a modelcontextprotocol.io server schema')
+          need(re.fullmatch(r'[a-z0-9.\-]+/[a-z0-9.\-]+', s.get('name', '') or ''),
+               'name must be <namespace>/<server>, lowercase reverse-DNS namespace')
+          need(re.fullmatch(r'\d+\.\d+\.\d+', s.get('version', '') or ''),
+               'version must be MAJOR.MINOR.PATCH')
+          need(0 < len(s.get('description', '')) <= 100,
+               'description must be 1..100 characters (registry cap)')
+          need((s.get('websiteUrl') or '').startswith('https://'), 'websiteUrl must be https')
+
+          remotes = s.get('remotes') or []
+          need(len(remotes) == 1, 'expected exactly one remote')
+          if remotes:
+              r = remotes[0]
+              need(r.get('type') in ('streamable-http', 'sse'), 'remote type must be streamable-http or sse')
+              need((r.get('url') or '').startswith('https://'), 'remote url must be https')
+              hdrs = {h.get('name') for h in (r.get('headers') or [])}
+              need('Authorization' in hdrs,
+                   'the Authorization header must be declared, or clients will not know a token is needed')
+              for h in (r.get('headers') or []):
+                  if h.get('name') == 'Authorization':
+                      need(h.get('isRequired') is True, 'Authorization must be isRequired')
+                      need(h.get('isSecret') is True, 'Authorization must be isSecret')
+
+          for icon in s.get('icons') or []:
+              need((icon.get('src') or '').startswith('https://'), f'icon src must be https: {icon.get("src")}')
+
+          if errs:
+              sys.exit('server.json problems:\n - ' + '\n - '.join(errs))
+          print('server.json looks right')
+          PY
+
+      - name: The endpoint is spelled the same way everywhere
+        run: |
+          python3 - <<'PY'
+          import json, pathlib, sys
+          url = json.load(open('server.json'))['remotes'][0]['url']
+          plugin = json.load(open('.mcp.json'))['mcpServers']['hosttracker']['url']
+          if plugin != url:
+              sys.exit(f'.mcp.json url {plugin} does not match server.json {url}')
+          missing = [n for n in ('README.md', 'CLIENT.md') if url not in pathlib.Path(n).read_text()]
+          if missing:
+              sys.exit('endpoint url missing from: ' + ', '.join(missing))
+          print('endpoint consistent:', url)
+          PY
+
+      - name: Registry validator
+        run: |
+          set -o pipefail
+          asset="mcp-publisher_linux_amd64.tar.gz"
+          url="https://github.com/modelcontextprotocol/registry/releases/latest/download/${asset}"
+          if ! curl -fsSL "$url" | tar xz mcp-publisher; then
+            echo "::warning::could not download mcp-publisher (${url}); the checks above still ran"
+            exit 0
+          fi
+          ./mcp-publisher validate server.json

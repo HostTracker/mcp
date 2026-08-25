@@ -1,0 +1,47 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.hosttracker/hosttracker",
+  "title": "HostTracker",
+  "description": "Website uptime monitoring: run checks from 300+ locations, manage monitors, alerts and incidents",
+  "version": "2.0.0",
+  "repository": {
+    "url": "https://github.com/HostTracker/mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://www.host-tracker.com/mcp-server",
+  "icons": [
+    {
+      "src": "https://www.host-tracker.com/android-chrome-512x512.png",
+      "mimeType": "image/png",
+      "sizes": ["512x512"]
+    },
+    {
+      "src": "https://www.host-tracker.com/img/social-logo.png",
+      "mimeType": "image/png",
+      "sizes": ["200x200"]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.host-tracker.com/mcp",
+      "headers": [
+        {
+          "name": "Authorization",
+          "description": "HostTracker API token. Mint one at https://www.host-tracker.com/integrations/api with the scopes you want the assistant to have (check, monitor:read, monitor:write, contact:*, subs:*, webhook:*, statuspage:*, account:read).",
+          "isRequired": true,
+          "isSecret": true,
+          "value": "Bearer {hosttracker_api_token}",
+          "variables": {
+            "hosttracker_api_token": {
+              "description": "Your HostTracker API token, minted at https://www.host-tracker.com/integrations/api",
+              "isRequired": true,
+              "isSecret": true,
+              "format": "string"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

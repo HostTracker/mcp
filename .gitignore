@@ -1,0 +1,7 @@
+# The registry publishing binary, if downloaded into this folder
+mcp-publisher
+mcp-publisher_*.tar.gz
+
+# Local scratch
+*.log
+.DS_Store

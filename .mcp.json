@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "hosttracker": {
+      "type": "streamable-http",
+      "url": "https://mcp.host-tracker.com/mcp"
+    }
+  }
+}
