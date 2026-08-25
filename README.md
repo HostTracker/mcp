@@ -16,11 +16,7 @@ Auth       Authorization: Bearer <your HostTracker API token>
 
 This repository is the public face of that hosted server: the connection metadata
 ([`server.json`](server.json)), the per-client setup guide ([`CLIENT.md`](CLIENT.md)), and the security policy
-([`SECURITY.md`](SECURITY.md)). The server itself is a hosted service, so there is nothing here to install or run.
-
-> **Availability:** the full tool surface described below is rolling out. If your client lists only the three
-> instant-check tools after connecting, it reached the previous version of the endpoint; reconnect after the
-> rollout completes.
+([`SECURITY.md`](SECURITY.md)). The server itself is a hosted service; the `Dockerfile` here only packages a stdio bridge to it (see "Docker" below).
 
 ## Connect in two minutes
 
