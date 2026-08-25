@@ -42,8 +42,10 @@ jobs:
 
           need(s.get('$schema', '').startswith('https://static.modelcontextprotocol.io/schemas/'),
                '$schema must point at a modelcontextprotocol.io server schema')
-          need(re.fullmatch(r'[a-z0-9.\-]+/[a-z0-9.\-]+', s.get('name', '') or ''),
-               'name must be <namespace>/<server>, lowercase reverse-DNS namespace')
+          # The namespace follows the GitHub org's exact spelling (the registry grants io.github.HostTracker/*),
+          # so the namespace part is case-sensitive mixed case; the server part stays lowercase.
+          need(re.fullmatch(r'[A-Za-z0-9.\-]+/[a-z0-9.\-]+', s.get('name', '') or ''),
+               'name must be <namespace>/<server> (reverse-DNS namespace, lowercase server name)')
           need(re.fullmatch(r'\d+\.\d+\.\d+', s.get('version', '') or ''),
                'version must be MAJOR.MINOR.PATCH')
           need(0 < len(s.get('description', '')) <= 100,
