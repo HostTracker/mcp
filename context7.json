@@ -1,0 +1,13 @@
+{
+  "$schema": "https://context7.com/schema/context7.json",
+  "projectTitle": "HostTracker MCP server",
+  "description": "Connect an AI assistant to HostTracker over MCP: run website checks from 300+ locations and manage monitors, alerts, incidents, webhooks and status pages. Client setup, tool catalogue, safety policy.",
+  "excludeFolders": [
+    "assets"
+  ],
+  "rules": [
+    "Remote streamable-HTTP server at https://mcp.host-tracker.com/mcp; nothing to install.",
+    "Authenticate with Authorization: Bearer <token>, minted at https://www.host-tracker.com/integrations/api with the scopes the assistant should have.",
+    "Single-resource delete tools preview first and only delete with confirmed=true; the server never modifies the account itself (profile, email, billing)."
+  ]
+}
