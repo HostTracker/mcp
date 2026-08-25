@@ -133,6 +133,19 @@ storing it in the editor's secret storage:
 }
 ```
 
+### Docker (stdio bridge)
+
+For a client that only speaks stdio, or to try the server without installing Node.js, the repository's
+`Dockerfile` packages the `mcp-remote` bridge in front of the hosted endpoint:
+
+```bash
+docker build -t hosttracker-mcp https://github.com/HostTracker/mcp.git
+docker run -i --rm -e HT_TOKEN=YOUR_HOSTTRACKER_API_TOKEN hosttracker-mcp
+```
+
+Point the client at that `docker run` command as a stdio server. Nothing of the service runs in the container;
+it forwards to `https://mcp.host-tracker.com/mcp` under your token.
+
 ### ChatGPT and other clients
 
 Any client that speaks MCP over streamable HTTP and can send a static header works. Give it the endpoint
