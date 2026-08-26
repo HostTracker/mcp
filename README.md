@@ -1,7 +1,7 @@
 # HostTracker MCP server
 
 [![validate](https://github.com/HostTracker/mcp/actions/workflows/validate.yml/badge.svg)](https://github.com/HostTracker/mcp/actions/workflows/validate.yml)
-[![smithery badge](https://smithery.ai/badge/hosttracker/hosttracker)](https://smithery.ai/server/hosttracker/hosttracker)
+[![Smithery](https://img.shields.io/badge/Smithery-hosttracker%2Fhosttracker-ff6a1f)](https://smithery.ai/server/hosttracker/hosttracker)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Connect an AI assistant to [HostTracker](https://www.host-tracker.com) over the
