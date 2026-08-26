@@ -2,6 +2,7 @@
 
 [![validate](https://github.com/HostTracker/mcp/actions/workflows/validate.yml/badge.svg)](https://github.com/HostTracker/mcp/actions/workflows/validate.yml)
 [![Smithery](https://img.shields.io/badge/Smithery-hosttracker%2Fhosttracker-ff6a1f)](https://smithery.ai/server/hosttracker/hosttracker)
+[![Glama score](https://glama.ai/mcp/servers/HostTracker/mcp/badges/score.svg)](https://glama.ai/mcp/servers/HostTracker/mcp)
 [![MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 Connect an AI assistant to [HostTracker](https://www.host-tracker.com) over the
