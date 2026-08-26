@@ -10,7 +10,21 @@ using Microsoft.AspNetCore.RateLimiting;
 // CALLER's own HostTracker API token per request. It holds no secrets, no database and no privileged access:
 // every authentication, scope and quota decision is made by the API from that token.
 
-var builder = WebApplication.CreateBuilder(args);
+// TRANSPORT. Streamable HTTP (the hosted endpoint) by default; `--stdio` (or MCP_TRANSPORT=stdio) serves the SAME
+// tools over stdin/stdout for clients and sandboxes that launch the server as a child process. In stdio mode the
+// caller's token comes from the HT_TOKEN environment variable (there is no request header), logs go to stderr
+// (stdout IS the protocol stream), and none of the HTTP-only machinery (Kestrel, forwarded headers, the rate
+// limiter, /stats) is started - a plain generic host runs the MCP session instead.
+var stdio = args.Contains("--stdio", StringComparer.OrdinalIgnoreCase)
+    || string.Equals(Environment.GetEnvironmentVariable("MCP_TRANSPORT"), "stdio", StringComparison.OrdinalIgnoreCase);
+var hostArgs = args.Where(a => !a.Equals("--stdio", StringComparison.OrdinalIgnoreCase)).ToArray();
+IHostApplicationBuilder builder = stdio ? Host.CreateApplicationBuilder(hostArgs) : WebApplication.CreateBuilder(hostArgs);
+var web = builder as WebApplicationBuilder;
+if (stdio) {
+    builder.Logging.ClearProviders();
+    builder.Logging.AddConsole(o => o.LogToStandardErrorThreshold = LogLevel.Trace);   // keep stdout clean
+    V2ToolBase.EnvironmentToken = Environment.GetEnvironmentVariable("HT_TOKEN");
+}
 
 // Real client IP behind Cloudflare: the per-IP rate limit below must key off the caller, not Cloudflare's edge
 // IP (otherwise every client behind one PoP shares a single bucket), so CF-Connecting-IP is honoured.
@@ -59,12 +73,12 @@ builder.Services.AddSingleton<CheckCatalog>();
 
 // The MCP server + HTTP (streamable) transport + the tool types. ServerInfo set explicitly so serverInfo.version
 // reads a clean "2.0.0" (the SDK otherwise derives the 4-part assembly version).
-builder.Services.AddMcpServer(o => o.ServerInfo = new ModelContextProtocol.Protocol.Implementation {
+var mcp = builder.Services.AddMcpServer(o => o.ServerInfo = new ModelContextProtocol.Protocol.Implementation {
         Name = "HostTracker.Mcp",
         Version = "2.0.0",
-    })
-    .WithHttpTransport()
-    .WithTools<InstantCheckTools>()
+    });
+mcp = stdio ? mcp.WithStdioServerTransport() : mcp.WithHttpTransport();
+mcp.WithTools<InstantCheckTools>()
     .WithTools<MonitorTools>()
     .WithTools<ResultTools>()
     .WithTools<MaintenanceTools>()
@@ -84,7 +98,7 @@ builder.Services.AddControllers();
 // Request-flood controls: body cap, connection ceiling and a per-IP rate limit keyed off the real client IP
 // (forwarded headers above). A bot challenge in front of the server cannot do this job - MCP clients are
 // programs, not browsers - so these in-app limits are the defense.
-builder.WebHost.ConfigureKestrel(k => {
+web?.WebHost.ConfigureKestrel(k => {
     k.Limits.MaxRequestBodySize = 256 * 1024;               // 256 KiB - JSON-RPC is small
     k.Limits.MaxConcurrentConnections = 500;                // ceiling so SSE/poll holds can't accumulate unbounded
     k.Limits.MaxConcurrentUpgradedConnections = 500;
@@ -103,7 +117,13 @@ builder.Services.AddRateLimiter(o => {
     });
 });
 
-var app = builder.Build();
+if (stdio) {
+    // One MCP session over stdin/stdout; the host exits when the client closes the stream.
+    ((HostApplicationBuilder)builder).Build().Run();
+    return;
+}
+
+var app = web!.Build();
 
 // Apply forwarded headers FIRST so RemoteIpAddress is the real client for the rate limiter + logging.
 app.UseForwardedHeaders();

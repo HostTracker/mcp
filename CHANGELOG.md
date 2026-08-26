@@ -15,6 +15,8 @@ listed here but do not require anyone to change their configuration: MCP clients
   a stateless ASP.NET Core bridge to the HostTracker API v2, with no configuration or secrets of its own.
 - A `Dockerfile` that builds and runs that source (`docker build` + `docker run -p 8080:8080`), and a CI job
   that builds it on every push.
+- A `--stdio` mode (also `MCP_TRANSPORT=stdio`): the same 65 tools over stdin/stdout for clients and sandboxes that
+  start the server as a child process. The token comes from the `HT_TOKEN` environment variable; logs go to stderr.
 
 ### Changed
 

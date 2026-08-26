@@ -145,6 +145,17 @@ Your copy then answers at `http://localhost:8080/mcp` and takes exactly the same
 it is a stateless bridge, so it stores nothing and still talks to the public HostTracker API v2 under your token.
 Without Docker, `dotnet run --project src` does the same on any machine with the .NET 10 SDK.
 
+The same binary also speaks **stdio**, for clients that launch the server as a child process instead of
+connecting to a URL. Add `--stdio` and pass your token as the `HT_TOKEN` environment variable (there is no request
+header on stdio):
+
+```bash
+HT_TOKEN=YOUR_HOSTTRACKER_API_TOKEN dotnet run --project src -- --stdio
+docker run -i --rm -e HT_TOKEN=YOUR_HOSTTRACKER_API_TOKEN hosttracker-mcp --stdio
+```
+
+Logs go to stderr in that mode, so stdout stays a clean protocol stream.
+
 ### ChatGPT and other clients
 
 Any client that speaks MCP over streamable HTTP and can send a static header works. Give it the endpoint

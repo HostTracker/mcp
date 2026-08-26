@@ -24,10 +24,24 @@ public abstract class V2ToolBase {
     protected static CallToolResult Ok(string text) => new() { Content = [new TextContentBlock { Text = text }] };
     protected static CallToolResult Err(string text) => new() { Content = [new TextContentBlock { Text = text }], IsError = true };
 
-    /// <summary>The caller's HostTracker API token, from the incoming request's Authorization header only.</summary>
+    /// <summary>The token for the stdio transport, where no request header exists: set once at startup from the
+    /// HT_TOKEN environment variable. Never consulted while serving HTTP, where every request carries its own token
+    /// - a process-wide token must not leak across callers.</summary>
+    internal static string? EnvironmentToken { get; set; }
+
+    /// <summary>The caller's HostTracker API token: the incoming request's Authorization header on the HTTP
+    /// transport, <see cref="EnvironmentToken"/> on stdio (no request in flight).</summary>
     protected bool TryGetToken(out string token, out string message) {
         token = ""; message = "";
-        var auth = httpContext.HttpContext?.Request.Headers.Authorization.ToString();
+        var request = httpContext.HttpContext?.Request;
+        if (request is null) {
+            token = EnvironmentToken?.Trim() ?? "";
+            if (token.Length > 0) return true;
+            message = "No HostTracker API token found. Set the HT_TOKEN environment variable for this MCP server. " +
+                      ToolText.MintHint;
+            return false;
+        }
+        var auth = request.Headers.Authorization.ToString();
         if (!string.IsNullOrEmpty(auth) && auth.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase)) {
             token = auth["Bearer ".Length..].Trim();
             if (token.Length > 0) return true;
