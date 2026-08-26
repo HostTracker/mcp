@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>HostTracker.Mcp</AssemblyName>
+    <RootNamespace>HostTracker.Mcp</RootNamespace>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Assembly/package version; serverInfo.version is set explicitly in Program.cs - keep the two in step. -->
+    <Version>2.0.0</Version>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="HostTracker.Mcp.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Official Model Context Protocol C# SDK, ASP.NET Core hosting integration (AddMcpServer /
+         WithHttpTransport / MapMcp / [McpServerTool]). This is the project's only dependency: it references
+         no other HostTracker code by design. -->
+    <PackageReference Include="ModelContextProtocol.AspNetCore" Version="1.4.1" />
+  </ItemGroup>
+
+</Project>

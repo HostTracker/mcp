@@ -17,11 +17,12 @@ Auth       Authorization: Bearer <your HostTracker API token>
 
 This repository is the public face of that hosted server: the connection metadata
 ([`server.json`](server.json)), the per-client setup guide ([`CLIENT.md`](CLIENT.md)), and the security policy
-([`SECURITY.md`](SECURITY.md)). The server itself is a hosted service; the `Dockerfile` here only packages a stdio bridge to it (see "Docker" below).
+([`SECURITY.md`](SECURITY.md)) - and, since 2.0.0, the server's own source code in [`src/`](src/), so you can read
+exactly what runs behind the endpoint or run a copy yourself (see "Run it yourself" below).
 
 ## Connect in two minutes
 
-1. **Mint a token.** Go to [Integrations → API](https://www.host-tracker.com/integrations/api) and create a token
+1. **Mint a token.** Go to [Integrations -> API](https://www.host-tracker.com/integrations/api) and create a token
    with the scopes you want the assistant to have (start with `check` and `monitor:read`).
 2. **Point your client at the endpoint** with that token in an `Authorization` header. Configuration blocks for
    every common client are below.
@@ -130,18 +131,19 @@ storing it in the editor's secret storage:
 }
 ```
 
-### Docker (stdio bridge)
+### Run it yourself (Docker)
 
-For a client that only speaks stdio, or to try the server without installing Node.js, the repository's
-`Dockerfile` packages the `mcp-remote` bridge in front of the hosted endpoint:
+The hosted endpoint is the normal way to use the server. If you would rather run your own copy - to read the
+code, audit it, or keep the MCP hop inside your network - the repository builds it from source:
 
 ```bash
 docker build -t hosttracker-mcp https://github.com/HostTracker/mcp.git
-docker run -i --rm -e HT_TOKEN=YOUR_HOSTTRACKER_API_TOKEN hosttracker-mcp
+docker run --rm -p 8080:8080 hosttracker-mcp
 ```
 
-Point the client at that `docker run` command as a stdio server. Nothing of the service runs in the container;
-it forwards to `https://mcp.host-tracker.com/mcp` under your token.
+Your copy then answers at `http://localhost:8080/mcp` and takes exactly the same `Authorization: Bearer` header:
+it is a stateless bridge, so it stores nothing and still talks to the public HostTracker API v2 under your token.
+Without Docker, `dotnet run --project src` does the same on any machine with the .NET 10 SDK.
 
 ### ChatGPT and other clients
 
@@ -212,7 +214,7 @@ Three behaviours worth knowing before the first call:
 
 ## Authentication and scopes
 
-Mint tokens at [Integrations → API](https://www.host-tracker.com/integrations/api). Scopes are per family with
+Mint tokens at [Integrations -> API](https://www.host-tracker.com/integrations/api). Scopes are per family with
 `:read` and `:write` leaves that do **not** imply each other; a bare family name satisfies every leaf under it.
 
 | You want the assistant to | Scopes |

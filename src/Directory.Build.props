@@ -1,0 +1,7 @@
+<Project>
+  <!-- Keeps this project self-contained when the folder sits inside a larger checkout: MSBuild stops looking
+       upward for Directory.Build.props here, and central package management from a parent is disabled. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

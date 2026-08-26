@@ -26,7 +26,7 @@ can do whatever its scopes allow.
   literal in a committed file. The VS Code configuration in [`CLIENT.md`](CLIENT.md) shows the prompted-input
   pattern; the Claude Desktop one shows the environment-variable pattern.
 - **Rotate on suspicion.** Remove the token from every client configuration and mint a replacement at
-  [Integrations → API](https://www.host-tracker.com/integrations/api).
+  [Integrations -> API](https://www.host-tracker.com/integrations/api).
 
 The server does not store tokens. Each request carries the caller's own token, which is forwarded to the
 HostTracker API for that one call and never persisted or shared between callers.

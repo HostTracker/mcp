@@ -5,3 +5,7 @@ mcp-publisher_*.tar.gz
 # Local scratch
 *.log
 .DS_Store
+
+# .NET build output
+bin/
+obj/

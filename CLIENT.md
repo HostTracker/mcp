@@ -6,7 +6,7 @@ run locally.
 
 ## 1. Mint a token
 
-Open [Integrations → API](https://www.host-tracker.com/integrations/api) on your HostTracker account and create a
+Open [Integrations -> API](https://www.host-tracker.com/integrations/api) on your HostTracker account and create a
 token. Two settings matter:
 
 - **Scopes.** Check only what the assistant should be able to do. Scopes are per family with `:read` and `:write`
@@ -50,7 +50,7 @@ prefixed, for example `hosttracker_run_instant_check`.
 ### Claude Desktop
 
 Desktop's "Add connector" dialog accepts OAuth connectors only. This server uses a bearer token, so connect
-through the `mcp-remote` bridge. Settings → Developer → Edit config opens `claude_desktop_config.json`:
+through the `mcp-remote` bridge. Settings -> Developer -> Edit config opens `claude_desktop_config.json`:
 
 ```json
 {
@@ -86,7 +86,7 @@ as `/usr/local/bin/npx` is sometimes needed in `command`.
 }
 ```
 
-Settings → MCP lists the server and its tools, with a refresh control if it was added while Cursor was running.
+Settings -> MCP lists the server and its tools, with a refresh control if it was added while Cursor was running.
 
 ### VS Code, GitHub Copilot agent mode
 
@@ -118,7 +118,7 @@ mode, and the tool picker lists the HostTracker tools.
 
 ### Windsurf
 
-`~/.codeium/windsurf/mcp_config.json`, reachable from Settings → Cascade → MCP servers:
+`~/.codeium/windsurf/mcp_config.json`, reachable from Settings -> Cascade -> MCP servers:
 
 ```json
 {

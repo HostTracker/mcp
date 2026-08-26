@@ -1,6 +1,7 @@
 name: validate
 # Keeps the published metadata honest: every JSON file parses, server.json carries what the MCP registry
-# requires, the endpoint is spelled the same way everywhere, and the registry's own validator agrees.
+# requires, the endpoint is spelled the same way everywhere, the registry's own validator agrees, and the server
+# source in src/ builds.
 on:
   push:
     branches: [main]
@@ -98,3 +99,13 @@ jobs:
             exit 0
           fi
           ./mcp-publisher validate server.json
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - name: Build the server
+        run: dotnet build src/HostTracker.Mcp.csproj -c Release --nologo

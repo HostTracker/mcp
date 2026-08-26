@@ -7,6 +7,20 @@ Notable changes to the HostTracker MCP server as a client sees it. The numbers m
 Changes behind the endpoint that do not alter how a client connects (new tools, clearer tool descriptions) are
 listed here but do not require anyone to change their configuration: MCP clients read the tool list live.
 
+## Unreleased
+
+### Added
+
+- The server's source code, under `src/`. It is the exact code behind `https://mcp.host-tracker.com/mcp`:
+  a stateless ASP.NET Core bridge to the HostTracker API v2, with no configuration or secrets of its own.
+- A `Dockerfile` that builds and runs that source (`docker build` + `docker run -p 8080:8080`), and a CI job
+  that builds it on every push.
+
+### Changed
+
+- The previous `Dockerfile`, which only wrapped the `mcp-remote` stdio bridge, is gone. Clients that need
+  stdio keep using `npx -y mcp-remote ...` as shown in `CLIENT.md`; nothing about the hosted endpoint changes.
+
 ## 2.0.0 - 2026-08-25
 
 Live at `https://mcp.host-tracker.com/mcp`: the handshake reports `2.0.0` and `tools/list` returns 65 tools.

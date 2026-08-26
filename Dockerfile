@@ -1,16 +1,23 @@
-# HostTracker MCP server, packaged as a stdio bridge.
+# Builds and runs the HostTracker MCP server from the source in src/.
 #
-# The server itself is hosted at https://mcp.host-tracker.com/mcp (streamable HTTP). This image runs the
-# official mcp-remote bridge in front of it, so a client that only speaks stdio, or an automated
-# directory check, can start it with `docker run -i`. Nothing of the service runs in the container.
+#   docker build -t hosttracker-mcp https://github.com/HostTracker/mcp.git
+#   docker run --rm -p 8080:8080 hosttracker-mcp
 #
-#   docker build -t hosttracker-mcp .
-#   docker run -i --rm -e HT_TOKEN=YOUR_HOSTTRACKER_API_TOKEN hosttracker-mcp
-#
-# Without HT_TOKEN the bridge still starts, and initialize / tools/list answer normally; every tool
-# call then returns an authentication error until a token is supplied.
-FROM node:22-alpine
-RUN npm install -g mcp-remote@latest
-COPY entrypoint.sh /usr/local/bin/entrypoint.sh
-RUN chmod +x /usr/local/bin/entrypoint.sh
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# The server then answers MCP streamable-HTTP at http://localhost:8080/mcp. It needs no configuration: every
+# request carries the caller's own HostTracker API token (Authorization: Bearer ...), and the tools call the
+# public HostTracker API v2. Override the API root with -e mcp__api2BaseUrl=... if you ever need to.
+
+# ---- build ----
+FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build
+WORKDIR /src
+COPY src/ ./
+RUN dotnet publish HostTracker.Mcp.csproj -c Release -o /app --self-contained false
+
+# ---- runtime ----
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-alpine
+WORKDIR /app
+RUN apk add --no-cache icu-libs
+ENV DOTNET_SYSTEM_GLOBALIZATION_INVARIANT=false
+COPY --from=build /app .
+EXPOSE 8080
+ENTRYPOINT ["dotnet", "HostTracker.Mcp.dll"]
