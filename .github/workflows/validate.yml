@@ -61,10 +61,12 @@ jobs:
               need((r.get('url') or '').startswith('https://'), 'remote url must be https')
               hdrs = {h.get('name') for h in (r.get('headers') or [])}
               need('Authorization' in hdrs,
-                   'the Authorization header must be declared, or clients will not know a token is needed')
+                   'the Authorization header must be declared so header-only clients know how to send a token')
               for h in (r.get('headers') or []):
                   if h.get('name') == 'Authorization':
-                      need(h.get('isRequired') is True, 'Authorization must be isRequired')
+                      # Since 2.1.0 the server supports OAuth 2.1 sign-in, so the static token is OPTIONAL
+                      # (OAuth-capable clients must not be forced to supply one); it stays a secret.
+                      need(h.get('isRequired') is False, 'Authorization must be OPTIONAL (isRequired false) - OAuth clients sign in without it')
                       need(h.get('isSecret') is True, 'Authorization must be isSecret')
 
           for icon in s.get('icons') or []:
