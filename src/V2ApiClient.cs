@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
+using Microsoft.Extensions.Configuration;
 
 namespace HostTracker.Mcp;
 
@@ -86,9 +87,24 @@ public sealed class V2ApiClient {
         DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
     };
 
-    public V2ApiClient(HttpClient http, ILogger<V2ApiClient> logger) {
+    /// <summary>OAuth issuer from <c>mcp:oauthIssuer</c>, or <see langword="null"/> when OAuth is off - read
+    /// once at construction via the OPTIONAL <see cref="IConfiguration"/> dependency so the many call sites
+    /// that build a client directly with no config in play (every existing test) keep compiling unchanged and
+    /// get OAuth-disabled behaviour, which is what they already exercise. Consumed by <see cref="V2ToolBase"/>
+    /// to attach the <c>mcp/www_authenticate</c> re-auth hint (see OAuthDiscovery) to a
+    /// tool result when THIS call came back 401 - never used to validate the token itself.</summary>
+    public string? OAuthIssuer { get; }
+
+    /// <summary>This pod's own public base URL (<c>mcp:publicBase</c>), used to build the
+    /// <c>WWW-Authenticate</c> challenge string carried in the same hint.</summary>
+    public string OAuthPublicBase { get; }
+
+    public V2ApiClient(HttpClient http, ILogger<V2ApiClient> logger, IConfiguration? configuration = null) {
         this.http = http;
         this.logger = logger;
+        (OAuthIssuer, OAuthPublicBase) = configuration is null
+            ? (null, "https://mcp.host-tracker.com")
+            : OAuthDiscovery.FromConfig(configuration);
     }
 
     /// <summary>One v2 call. <paramref name="path"/> is a v2 path such as <c>/monitor/{id}</c> already resolved

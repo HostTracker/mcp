@@ -64,7 +64,7 @@ public abstract class V2ToolBase {
         if (SensitivePolicy.IsBlocked(method.Method, path, out var blocked)) return Err(blocked);
 
         var response = await Api.SendAsync(token, method, path, query, body, idempotencyKey, ct).ConfigureAwait(false);
-        if (!response.Ok) return Err(ToolText.ErrorText(response.Error!));
+        if (!response.Ok) return WithReAuthHint(Err(ToolText.ErrorText(response.Error!)), response.Error!);
 
         var rendered = response.Body.ValueKind == JsonValueKind.Undefined ? "done.\n" : ToolText.Render(response.Body);
         if (untrusted) rendered = ToolText.Fence(rendered);
@@ -78,7 +78,18 @@ public abstract class V2ToolBase {
         if (!TryGetToken(out var token, out var noToken)) return Err(noToken);
 
         var page = await Api.GetPageAsync(token, path, query, ct).ConfigureAwait(false);
-        return page.Ok ? Ok(ToolText.RenderPage(heading, page, toolName)) : Err(ToolText.ErrorText(page.Error!));
+        return page.Ok ? Ok(ToolText.RenderPage(heading, page, toolName)) : WithReAuthHint(Err(ToolText.ErrorText(page.Error!)), page.Error!);
+    }
+
+    /// <summary>Attaches the OAuth in-band re-auth hint to a failed tool result when the failure was the API
+    /// answering 401 to the caller's forwarded token AND OAuth is configured on this pod
+    /// (<see cref="V2ApiClient.OAuthIssuer"/> non-null). A no-op otherwise - in particular a no-op for every
+    /// OTHER error code, and a no-op everywhere while `mcp:oauthIssuer` is unset (plain bearer-token
+    /// behaviour, byte-identical to before this feature).</summary>
+    private CallToolResult WithReAuthHint(CallToolResult result, V2Error error) {
+        if (error.Status == 401 && Api.OAuthIssuer is not null)
+            result.Meta = OAuthDiscovery.WwwAuthenticateMeta(Api.OAuthPublicBase);
+        return result;
     }
 
     /// <summary>Parse a caller-supplied JSON argument. Tools take JSON strings for the members v2 leaves open

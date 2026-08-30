@@ -41,6 +41,12 @@ builder.Services.Configure<ForwardedHeadersOptions>(o => {
 // Tools read the caller's bearer token off the incoming request (transport header) - needs the accessor.
 builder.Services.AddHttpContextAccessor();
 
+// MCP OAuth discovery: mcp:oauthIssuer empty = the dark switch, byte-identical to plain bearer-token
+// behaviour (no challenge, well-known routes 404, no re-auth _meta hint - see OAuthDiscovery.cs).
+// V2ApiClient reads the SAME two keys itself (DI hands it IConfiguration automatically) for the upstream-401
+// _meta hint - this local copy only serves the challenge middleware + well-known routes wired below.
+var (oauthIssuer, mcpPublicBase) = OAuthDiscovery.FromConfig(builder.Configuration);
+
 // Typed HttpClient to the HostTracker API v2. Base address + timeout from config; NO default Authorization
 // header - the token is set per request inside V2ApiClient, because a shared default header would cross user
 // tokens under concurrency. Outbound connections and response size are bounded so a slow or huge upstream
@@ -145,6 +151,18 @@ app.UseExceptionHandler(errApp => errApp.Run(async ctx => {
 
 app.UseRateLimiter();
 
+// MCP OAuth 401 discovery challenge: a request to /mcp with no Authorization header at all gets turned back
+// with the WWW-Authenticate resource_metadata challenge BEFORE it ever reaches MapMcp - a presence check
+// only (OAuthDiscovery.cs; the HostTracker API remains the sole token validator). A no-op while
+// mcp:oauthIssuer is empty, and a no-op for a request that DOES carry an Authorization header (even an
+// invalid one - that reaches the tools and the API answers its own 401 per call).
+app.Use(async (context, next) => {
+    if (OAuthDiscovery.NeedsChallenge(oauthIssuer, context.Request.Path, context.Request.Headers.Authorization.ToString()))
+        await OAuthDiscovery.WriteChallengeAsync(context, mcpPublicBase);
+    else
+        await next(context);
+});
+
 // Anonymous /stats health surface (counts-only). MapMcp hosts the JSON-RPC endpoint at /mcp.
 app.MapControllers();
 
@@ -153,6 +171,15 @@ app.MapControllers();
 app.MapGet("/.well-known/glama.json", () => Results.Content(
     "{\"$schema\":\"https://glama.ai/mcp/schemas/connector.json\",\"maintainers\":[{\"email\":\"danyloshashenko@gmail.com\"},{\"email\":\"danylo.shashenko@gmail.com\"}]}",
     "application/json"));
+
+// MCP OAuth Protected Resource Metadata (RFC 9728, plan §3.1/§9.5) - both routes, same document; clients probe
+// the /mcp-suffixed variant first. 404 while mcp:oauthIssuer is empty (the dark switch). Already rate-limiter-
+// exempt via the /.well-known path-prefix check above.
+app.MapGet("/.well-known/oauth-protected-resource",
+    (HttpContext context) => OAuthDiscovery.WriteProtectedResourceMetadataAsync(context, oauthIssuer, mcpPublicBase));
+app.MapGet("/.well-known/oauth-protected-resource/mcp",
+    (HttpContext context) => OAuthDiscovery.WriteProtectedResourceMetadataAsync(context, oauthIssuer, mcpPublicBase));
+
 app.MapMcp("/mcp");
 
 app.Run();
