@@ -3,7 +3,7 @@
   "name": "io.github.HostTracker/hosttracker",
   "title": "HostTracker",
   "description": "Website uptime monitoring: run checks from 300+ locations, manage monitors, alerts and incidents",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "repository": {
     "url": "https://github.com/HostTracker/mcp",
     "source": "github"

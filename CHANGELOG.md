@@ -7,9 +7,29 @@ Notable changes to the HostTracker MCP server as a client sees it. The numbers m
 Changes behind the endpoint that do not alter how a client connects (new tools, clearer tool descriptions) are
 listed here but do not require anyone to change their configuration: MCP clients read the tool list live.
 
-## Unreleased
+## 2.1.0 - 2026-08-30
 
 ### Added
+
+- **OAuth 2.1 sign-in.** Clients that support OAuth connectors (Claude.ai, Claude Desktop, Claude Code, ChatGPT,
+  and others) connect by adding `https://mcp.host-tracker.com/mcp` and signing in - no API token to mint or
+  paste. The endpoint now answers an unauthenticated request with `401` + `WWW-Authenticate: Bearer
+  resource_metadata=...`, publishes RFC 9728 protected-resource metadata at
+  `/.well-known/oauth-protected-resource` (and the `/mcp`-suffixed variant), and the authorization server at
+  `https://www.host-tracker.com` publishes RFC 8414 metadata (`/.well-known/oauth-authorization-server`):
+  authorization code + PKCE (S256), dynamic client registration (RFC 7591) and Client ID Metadata Documents,
+  rotating refresh tokens, RFC 7009 revocation. Permissions are granted per scope family on the consent page;
+  the `account` family is never grantable to a connected app. Connections are listed and revocable under
+  Integrations -> API -> Connected apps.
+- A tool result that fails because the API answered `401` (expired or revoked token) now carries the
+  `_meta["mcp/www_authenticate"]` hint, so clients re-authorize instead of failing silently.
+- Two configuration keys for self-hosted copies: `oauthIssuer` (empty = plain bearer-token behaviour, exactly as
+  before) and `publicBase` (the URL the resource metadata names).
+
+### Changed
+
+- Bearer tokens keep working unchanged. The one visible difference for token users: a request with NO
+  `Authorization` header at all is now a `401` challenge rather than a tool-level "no token" message.
 
 - The server's source code, under `src/`. It is the exact code behind `https://mcp.host-tracker.com/mcp`:
   a stateless ASP.NET Core bridge to the HostTracker API v2, with no configuration or secrets of its own.

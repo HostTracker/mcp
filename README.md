@@ -13,7 +13,7 @@ maintenance window, review incidents, manage who gets alerted, wire a webhook, p
 ```
 Endpoint   https://mcp.host-tracker.com/mcp
 Transport  streamable HTTP
-Auth       Authorization: Bearer <your HostTracker API token>
+Auth       OAuth 2.1 (sign in when your client asks) - or Authorization: Bearer <HostTracker API token>
 ```
 
 This repository is the public face of that hosted server: the connection metadata
@@ -23,15 +23,26 @@ exactly what runs behind the endpoint or run a copy yourself (see "Run it yourse
 
 ## Connect in two minutes
 
-1. **Mint a token.** Go to [Integrations -> API](https://www.host-tracker.com/integrations/api) and create a token
-   with the scopes you want the assistant to have (start with `check` and `monitor:read`).
-2. **Point your client at the endpoint** with that token in an `Authorization` header. Configuration blocks for
-   every common client are below.
-3. **Reload the client** so it discovers the tools, then ask in plain language: *"is example.com up right now,
+**With OAuth (recommended - Claude.ai, Claude Desktop, Claude Code, ChatGPT and any client with an OAuth-capable
+connector dialog):**
+
+1. **Add the endpoint** `https://mcp.host-tracker.com/mcp` as a connector in your client.
+2. **Sign in and approve.** The client opens HostTracker's sign-in page, then a consent card listing the
+   permissions it asks for (by default: run checks + read monitors). Press Approve. No token ever appears.
+3. **Ask in plain language:** *"is example.com up right now,
    checked from Europe and Asia?"*, *"which of my monitors are down?"*, *"pause the staging monitor until
    tomorrow"*.
 
 ### Claude Code
+
+With OAuth (no token needed):
+
+```sh
+claude mcp add --transport http hosttracker https://mcp.host-tracker.com/mcp
+# then, inside Claude Code: /mcp -> hosttracker -> Authenticate (opens the sign-in + consent page)
+```
+
+Or with a bearer token in the header:
 
 `.mcp.json` in your project (or `~/.claude.json` for a user-wide connector):
 
@@ -54,10 +65,14 @@ claude mcp add --transport http hosttracker https://mcp.host-tracker.com/mcp \
   --header "Authorization: Bearer YOUR_HOSTTRACKER_API_TOKEN"
 ```
 
-### Claude Desktop
+### Claude.ai and Claude Desktop
 
-The "Add connector" dialog accepts OAuth connectors only, and this server authenticates with a bearer token, so
-Desktop connects through the `mcp-remote` bridge. Edit `claude_desktop_config.json`:
+Settings -> Connectors -> **Add custom connector** -> paste `https://mcp.host-tracker.com/mcp` -> Connect. The
+browser opens HostTracker's sign-in + consent page; press Approve and the connector is live. That is the whole
+setup.
+
+To use a **bearer token** instead (for example a long-lived token with a hand-picked scope set), Desktop can also
+connect through the `mcp-remote` bridge. Edit `claude_desktop_config.json`:
 
 ```json
 {
@@ -159,10 +174,13 @@ Logs go to stderr in that mode, so stdout stays a clean protocol stream.
 
 ### ChatGPT and other clients
 
-Any client that speaks MCP over streamable HTTP and can send a static header works. Give it the endpoint
+**ChatGPT** (developer mode -> connectors): add `https://mcp.host-tracker.com/mcp`; ChatGPT offers its "link
+account" step, which opens HostTracker's sign-in + consent page. Any other client with an OAuth-capable connector
+dialog works the same way - just the URL.
+
+Any client that can send a static header also works with a **bearer token**: the endpoint
 `https://mcp.host-tracker.com/mcp` and the header `Authorization: Bearer YOUR_HOSTTRACKER_API_TOKEN`. Where a
-client's connector form offers an API-key or custom-header authentication mode, the token goes there; where it
-offers OAuth only, use the `mcp-remote` bridge shown under Claude Desktop.
+client's connector form offers an API-key or custom-header authentication mode, the token goes there.
 
 A generic, dependency-free bridge for anything that can only launch a command:
 
@@ -226,8 +244,20 @@ Three behaviours worth knowing before the first call:
 
 ## Authentication and scopes
 
-Mint tokens at [Integrations -> API](https://www.host-tracker.com/integrations/api). Scopes are per family with
-`:read` and `:write` leaves that do **not** imply each other; a bare family name satisfies every leaf under it.
+Two ways in, same permission model:
+
+- **OAuth (connected apps).** The client registers itself, you sign in once and approve a scope set on the
+  consent page, and the server mints short-lived access tokens (1 hour) with rotating refresh tokens (90 days)
+  behind the scenes. If the client requests no scopes it gets `check` + `monitor:read`. The `account` family is
+  never grantable to a connected app. Every connection is listed under
+  [Integrations -> API -> Connected apps](https://www.host-tracker.com/integrations/api), where one click revokes it
+  (the app then has to ask you again). A tool that needs a scope the connection lacks answers `missing_scope`
+  naming what is required - reconnect and approve the wider set.
+- **Bearer tokens.** Mint them at [Integrations -> API](https://www.host-tracker.com/integrations/api) with a
+  hand-picked scope set, expiration and optional IP allow-list; pass them in the `Authorization` header.
+
+Scopes are per family with `:read` and `:write` leaves that do **not** imply each other; a bare family name
+satisfies every leaf under it.
 
 | You want the assistant to | Scopes |
 |---|---|
@@ -238,7 +268,7 @@ Mint tokens at [Integrations -> API](https://www.host-tracker.com/integrations/a
 | Manage contacts and subscriptions | `contact:write`, `subs:write` |
 | Manage webhooks | `webhook:read`, `webhook:write` |
 | Manage status pages and publish incidents | `statuspage:read`, `statuspage:write` |
-| Read quota, usage and limits | `account:read` |
+| Read quota, usage and limits | `account:read` (bearer tokens only - not offered to OAuth connections) |
 
 Grant the narrowest set that covers the work. There is never a reason to grant `account:write`: the server refuses
 every write under `/account` regardless of what the token allows. If a call comes back refused, ask the assistant

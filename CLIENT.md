@@ -1,13 +1,23 @@
 # Connecting a client to the HostTracker MCP server
 
-The server speaks MCP over **streamable HTTP** at `https://mcp.host-tracker.com/mcp` and authenticates with an
-`Authorization: Bearer <token>` header carrying a HostTracker API token. There is nothing to install and nothing to
-run locally.
+The server speaks MCP over **streamable HTTP** at `https://mcp.host-tracker.com/mcp`. There is nothing to install
+and nothing to run locally. It authenticates in one of two ways:
 
-## 1. Mint a token
+- **OAuth 2.1 (recommended).** Add the endpoint in a client with an OAuth-capable connector dialog (Claude.ai,
+  Claude Desktop, Claude Code, ChatGPT, ...); the client opens HostTracker's sign-in page and a consent card, you
+  approve, and tokens are handled for you from then on - short-lived, refreshed silently, revocable any time
+  under [Integrations -> API -> Connected apps](https://www.host-tracker.com/integrations/api).
+- **A bearer token** you mint yourself and pass in an `Authorization: Bearer <token>` header - for clients
+  that only send static headers, or when you want a hand-picked scope set and expiration.
 
-Open [Integrations -> API](https://www.host-tracker.com/integrations/api) on your HostTracker account and create a
-token. Two settings matter:
+## 1. Choose: sign in with OAuth, or mint a token
+
+**OAuth:** nothing to prepare - go straight to section 2 and add the URL; sign in when the client asks. If the
+client asks for no scopes, the connection gets `check` + `monitor:read`; the consent card always shows exactly
+what is being granted. The `account` family is never offered to connected apps.
+
+**Token:** open [Integrations -> API](https://www.host-tracker.com/integrations/api) on your HostTracker account
+and create a token. Two settings matter:
 
 - **Scopes.** Check only what the assistant should be able to do. Scopes are per family with `:read` and `:write`
   leaves that do not imply each other, and a bare family name covers every leaf under it. `check` alone is enough
@@ -22,6 +32,17 @@ Your plan must include API access. The token is a credential: treat it like a pa
 ## 2. Configure your client
 
 ### Claude Code
+
+With OAuth:
+
+```sh
+claude mcp add --transport http hosttracker https://mcp.host-tracker.com/mcp
+```
+
+then `/mcp` -> `hosttracker` -> **Authenticate**: the browser opens the sign-in + consent page (Claude Code
+listens on a localhost port for the redirect - that is normal and stays on your machine).
+
+With a bearer token:
 
 Project-scoped, in `.mcp.json` at the repository root:
 
@@ -47,10 +68,14 @@ claude mcp add --transport http hosttracker https://mcp.host-tracker.com/mcp \
 Check it with `claude mcp list`, then `/mcp` inside a session to see the connection state. The tools appear
 prefixed, for example `hosttracker_run_instant_check`.
 
-### Claude Desktop
+### Claude.ai and Claude Desktop
 
-Desktop's "Add connector" dialog accepts OAuth connectors only. This server uses a bearer token, so connect
-through the `mcp-remote` bridge. Settings -> Developer -> Edit config opens `claude_desktop_config.json`:
+Settings -> Connectors -> **Add custom connector** -> paste `https://mcp.host-tracker.com/mcp` -> Connect. A browser
+window opens HostTracker's sign-in page (skipped if you are already signed in) and then the consent card; press
+**Approve**. The window closes and the connector shows as connected - done.
+
+To connect with a **bearer token** instead, use the `mcp-remote` bridge. Settings -> Developer -> Edit config opens
+`claude_desktop_config.json`:
 
 ```json
 {
@@ -136,7 +161,11 @@ key before assuming the token is at fault.
 
 ### ChatGPT and other MCP clients
 
-Any client that can dial a streamable-HTTP MCP endpoint and send a static header works. Supply:
+**ChatGPT:** developer mode -> connectors -> add `https://mcp.host-tracker.com/mcp`. ChatGPT shows its "link
+account" step after the first call; it opens HostTracker's sign-in + consent page. Any other client with an
+OAuth-capable connector dialog needs only the URL as well.
+
+Any client that can dial a streamable-HTTP MCP endpoint and send a static header also works with a token. Supply:
 
 ```
 URL     https://mcp.host-tracker.com/mcp
@@ -185,9 +214,15 @@ endpoint; reconnect once the current rollout completes. No tools at all usually 
 `Authorization` header: confirm the header reaches the server by testing the same token with `curl` as above plus a
 `tools/list` call.
 
-**Every call is refused for permissions.** Ask the assistant to run `get_account_quota`. It reports the scopes the
-token actually carries, which is the fastest way to see that, for example, `monitor:write` was never checked at
-mint time. Scopes cannot be added to an existing token; mint a new one.
+**Every call is refused for permissions.** The refusal names the scope required and the scopes granted. On an
+**OAuth** connection, remove and re-add the connector (or reconnect when the client offers it) and approve the
+wider set on the consent card - a connection's scopes cannot be widened silently, and `account` is never offered.
+On a **bearer token**, ask the assistant to run `get_account_quota` to see the scopes the token carries; scopes
+cannot be added to an existing token, so mint a new one.
+
+**The consent page says the app is not registered or the request is malformed.** The client's registration
+expired or was purged (registrations with no approved connection are cleaned up after ~30 days). Remove and
+re-add the connector so the client registers afresh.
 
 **Calls fail with a rate-limit or quota message.** The endpoint limits requests per client IP, and your API plan
 quota is enforced against the token itself. The message names which one bound and, when the server was told, when
@@ -201,8 +236,11 @@ cached session under `~/.mcp-auth`, which can be deleted safely.
 **A corporate proxy or TLS inspection breaks the stream.** Streamable HTTP holds a long-lived response; proxies
 that buffer or truncate it cause silent disconnects. Allow `mcp.host-tracker.com` through without buffering.
 
-**The token leaked, or you no longer trust it.** Tokens cannot be revoked before expiry. Remove it from every
-client configuration, mint a replacement with a short expiration, and see [`SECURITY.md`](SECURITY.md).
+**You no longer trust a connected app.** [Integrations -> API -> Connected apps](https://www.host-tracker.com/integrations/api)
+-> Revoke. Its refresh chain dies immediately; the last access token expires within the hour.
+
+**A bearer token leaked, or you no longer trust it.** Bearer tokens cannot be revoked before expiry. Remove it from
+every client configuration, mint a replacement with a short expiration, and see [`SECURITY.md`](SECURITY.md).
 
 **Anything else.** [ht2support@host-tracker.com](mailto:ht2support@host-tracker.com), with the tool name, the
 message you saw, and the approximate time. Never include the token itself.
