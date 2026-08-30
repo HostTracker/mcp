@@ -13,12 +13,16 @@
     {
       "src": "https://www.host-tracker.com/android-chrome-512x512.png",
       "mimeType": "image/png",
-      "sizes": ["512x512"]
+      "sizes": [
+        "512x512"
+      ]
     },
     {
       "src": "https://www.host-tracker.com/img/social-logo.png",
       "mimeType": "image/png",
-      "sizes": ["200x200"]
+      "sizes": [
+        "200x200"
+      ]
     }
   ],
   "remotes": [
@@ -28,14 +32,14 @@
       "headers": [
         {
           "name": "Authorization",
-          "description": "HostTracker API token. Mint one at https://www.host-tracker.com/integrations/api with the scopes you want the assistant to have (check, monitor:read, monitor:write, contact:*, subs:*, webhook:*, statuspage:*, account:read).",
-          "isRequired": true,
+          "description": "Optional. OAuth-capable clients (Claude.ai, Claude Desktop, Claude Code, ChatGPT and others) sign in automatically - leave this empty. Set it only for clients that can send a static header but not OAuth: a HostTracker API token minted at https://www.host-tracker.com/integrations/api with the scopes you want (check, monitor:read, monitor:write, contact:*, subs:read, webhook:*, statuspage:*, account:read).",
+          "isRequired": false,
           "isSecret": true,
           "value": "Bearer {hosttracker_api_token}",
           "variables": {
             "hosttracker_api_token": {
-              "description": "Your HostTracker API token, minted at https://www.host-tracker.com/integrations/api",
-              "isRequired": true,
+              "description": "Your HostTracker API token (only for non-OAuth clients), minted at https://www.host-tracker.com/integrations/api",
+              "isRequired": false,
               "isSecret": true,
               "format": "string"
             }
